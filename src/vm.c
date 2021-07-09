@@ -85,7 +85,27 @@ static InterpretResult run() {
 #undef BINARY_OP
 }
 
+/* Interprets source code from a file:
+ *      Compiles the source code and fills a chunk with the corresponding bytecode. If there is a compilation error,
+ *      compile() returns false and the chunk is discarded. Otherwise, the chunk is sent to the VM to be executed.
+ *
+ *  Returns:
+ *      Returns if there was an error and if it is from compilation or runtime.
+ */
 InterpretResult interpret(const char* source) {
-	compile(source);
-	return INTERPRET_OK;
+	Chunk chunk;
+	initChunk(&chunk);
+
+	if (!compile(source, &chunk)) {
+		freeChunk(&chunk);
+		return INTERPRET_COMPILE_ERROR;
+	}
+
+	vm.chunk = &chunk;
+	vm.ip = vm.chunk->code;
+
+	InterpretResult result = run();
+
+	freeChunk(&chunk);
+	return result;
 }
