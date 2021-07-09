@@ -35,3 +35,22 @@ void writeValueArray(ValueArray* arr, Value value) {
 	arr->values[arr->count] = value;
 	arr->count++;
 }
+
+/* Deallocates the memory of a ValueArray and reinitializes it
+ *
+ *  Params:
+ *      arr:      the ValueArray to free and reinitialize
+ */
+void freeValueArray(ValueArray* arr) {
+	FREE_ARRAY(Value, arr->values, arr->capacity);
+	initValueArray(arr);
+}
+
+/* Prints a value
+ *
+ *  Params:
+ *      value:      the value to be printed
+ */
+void printValue(Value value) {
+	printf("%g", value);
+}
