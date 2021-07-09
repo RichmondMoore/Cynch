@@ -12,15 +12,18 @@ void initChunk(Chunk* chunk) {
 	chunk->count = 0;
 	chunk->capacity = 0;
 	chunk->code = NULL;
+	chunk->lineCount = 0;
+	chunk->lineCapacity = 0;
 	chunk->lines = NULL;
 	initValueArray(&chunk->constants);
 }
 
-/* Adds the data to a chunk, grows the array if necessary
+/* Adds the data to a chunk, grows the arrays if necessary
  *
  * Params:
  *      chunk:      the chunk to write to
  *      byte:       the information to write to the chunk
+ *      line:       the source line of the chunk
 */
 void writeChunk(Chunk* chunk, uint8_t byte, int line) {
 	// If there is no more room in the array, increase its size
@@ -28,13 +31,29 @@ void writeChunk(Chunk* chunk, uint8_t byte, int line) {
 		int oldCapacity = chunk->capacity;
 		chunk->capacity = GROW_CAPACITY(oldCapacity);
 		chunk->code = GROW_ARRAY(uint8_t, chunk->code, oldCapacity, chunk->capacity);
-		chunk->lines = GROW_ARRAY(int, chunk->lines, oldCapacity, chunk->capacity);
 	}
 
 	// Then add the new data and increment the count
 	chunk->code[chunk->count] = byte;
-	chunk->lines[chunk->count] = line;
 	chunk->count++;
+
+	// Checks if chunk is still on the same line
+	if (chunk->lineCount > 0 && chunk->lines[chunk->lineCount - 1].line == line) {
+		return;
+	}
+
+	// Otherwise, a LineStart needs to be added
+	// Checks if there is room in the array, grows if necessary
+	if (chunk->lineCapacity < chunk->lineCount + 1) {
+		int oldCapacity = chunk->lineCapacity;
+		chunk->lineCapacity = GROW_CAPACITY(oldCapacity);
+		chunk->lines = GROW_ARRAY(LineStart, chunk->lines, oldCapacity, chunk->lineCapacity);
+	}
+
+	// Adds the new LineStart
+	LineStart* lineStart = &chunk->lines[chunk->lineCount++];
+	lineStart->offset = chunk->count - 1;
+	lineStart->line = line;
 }
 
 /* Adds a value to a chunk's list of constants
@@ -78,7 +97,33 @@ void writeConstant(Chunk* chunk, Value value, int line) {
  */
 void freeChunk(Chunk* chunk) {
 	FREE_ARRAY(uint8_t, chunk->code, chunk->capacity);
-	FREE_ARRAY(int, chunk->lines, chunk->capacity);
+	FREE_ARRAY(LineStart, chunk->lines, chunk->lineCapacity);
 	freeValueArray(&chunk->constants);
 	initChunk(chunk);
+}
+
+/* Finds the current line given the chunk and instruction using a binary search.
+ *
+ *  Params:
+ *      chunk:          the chunk to search
+ *      instruction:    the instruction to find within the chunk
+ *
+ *  Returns:
+ *      The line number of the specified instruction within the chunk.
+ */
+int getLine(Chunk* chunk, int instruction) {
+	int start = 0;
+	int end = chunk->lineCount - 1;
+
+	for (;;) {
+		int mid = (start + end) / 2;
+		LineStart* line = &chunk->lines[mid];
+		if (instruction < line->offset) {
+			end = mid - 1;
+		} else if (mid == chunk->lineCount - 1 || instruction < chunk->lines[mid + 1].offset) {
+			return line->line;
+		} else {
+			start = mid + 1;
+		}
+	}
 }
