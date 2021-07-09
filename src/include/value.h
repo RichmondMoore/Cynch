@@ -14,5 +14,6 @@ typedef struct {
 void initValueArray(ValueArray* arr);
 void writeValueArray(ValueArray* arr, Value value);
 void freeValueArray(ValueArray* arr);
+void printValue(Value value);
 
 #endif //CYNCH_VALUE_H
