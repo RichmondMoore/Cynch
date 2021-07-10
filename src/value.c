@@ -52,5 +52,5 @@ void freeValueArray(ValueArray* arr) {
  *      value:      the value to be printed
  */
 void printValue(Value value) {
-	printf("%g", value);
+	printf("%g", AS_NUMBER(value));
 }
